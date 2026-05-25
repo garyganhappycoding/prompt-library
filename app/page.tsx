@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Toast from '@/components/Toast'
@@ -14,7 +14,7 @@ const emptyFields = (): PromptFields => ({
   context: '', reference: '', constraints: '', notes: '',
 })
 
-export default function BuilderPage() {
+function BuilderInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('edit')
@@ -28,7 +28,6 @@ export default function BuilderPage() {
   const [toast, setToast] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  // Load existing prompt if editing
   useEffect(() => {
     if (editId) {
       const prompts = loadPrompts()
@@ -52,7 +51,7 @@ export default function BuilderPage() {
   async function handleGenerate() {
     const apiKey = loadApiKey()
     if (!apiKey) {
-      setError('No API key found. Click ⚙ in the nav to add your Gemini API key.')
+      setError('No API key found. Click the gear icon in the nav to add your Gemini API key.')
       return
     }
     if (!fields.task.trim()) {
@@ -102,8 +101,6 @@ export default function BuilderPage() {
       <Nav />
       <div className="page-wrapper">
         <div className={styles.container}>
-
-          {/* STEP 1: Name entry */}
           {step === 'name' && (
             <div className={`${styles.nameStep} fade-up`}>
               <div className={styles.eyebrow}>new prompt</div>
@@ -126,7 +123,6 @@ export default function BuilderPage() {
             </div>
           )}
 
-          {/* STEP 2: Form */}
           {(step === 'form' || step === 'result') && (
             <div className={styles.formStep}>
               <div className={styles.formHeader}>
@@ -137,7 +133,6 @@ export default function BuilderPage() {
                   <div className={styles.formTitle}>{promptName}</div>
                 </div>
               </div>
-
               <div className={styles.formGrid}>
                 {FIELD_META.map((f, i) => (
                   <div key={f.key} className={`${styles.fieldGroup} fade-up fade-up-delay-${Math.min(i + 1, 5)}`}>
@@ -155,11 +150,7 @@ export default function BuilderPage() {
                   </div>
                 ))}
               </div>
-
-              {error && (
-                <div className={styles.errorBox}>{error}</div>
-              )}
-
+              {error && <div className={styles.errorBox}>{error}</div>}
               <div className={styles.formActions}>
                 <button
                   className="btn-primary"
@@ -174,20 +165,12 @@ export default function BuilderPage() {
                   ) : step === 'result' ? 'Regenerate Prompt' : 'Generate Prompt'}
                 </button>
               </div>
-
-              {/* STEP 3: Result */}
               {step === 'result' && generatedPrompt && (
                 <div className={`${styles.resultBox} fade-up`}>
                   <div className={styles.resultHeader}>
                     <span className="tag tag-accent">Generated Prompt</span>
-                    <button
-                      className="btn-ghost"
-                      style={{ fontSize: 12 }}
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedPrompt)
-                        setToast('Copied!')
-                      }}
-                    >
+                    <button className="btn-ghost" style={{ fontSize: 12 }}
+                      onClick={() => { navigator.clipboard.writeText(generatedPrompt); setToast('Copied!') }}>
                       Copy
                     </button>
                   </div>
@@ -200,9 +183,7 @@ export default function BuilderPage() {
                   />
                   <hr className="divider" />
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="btn-primary" onClick={handleSave}>
-                      Save to Library →
-                    </button>
+                    <button className="btn-primary" onClick={handleSave}>Save to Library →</button>
                   </div>
                 </div>
               )}
@@ -212,5 +193,13 @@ export default function BuilderPage() {
       </div>
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </>
+  )
+}
+
+export default function BuilderPage() {
+  return (
+    <Suspense fallback={<div style={{ background: '#0a0a0a', minHeight: '100vh' }} />}>
+      <BuilderInner />
+    </Suspense>
   )
 }
